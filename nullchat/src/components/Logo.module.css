@@ -1,0 +1,61 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0px;
+  user-select: none;
+}
+
+/* ICON */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  filter: drop-shadow(0 2px 6px rgba(37, 150, 190, 0.25));
+  /* padding-bottom: 5px; */
+  /* padding-right: 0px; */
+}
+
+.icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* WORDMARK */
+.wordmark {
+  font-family: var(--font);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.null {
+  color: var(--primary);
+}
+
+.chat {
+  color: var(--text);
+  opacity: 0.75;
+}
+
+/* SIZES */
+.sm .icon { width: 20px; height: 20px; }
+.sm .wordmark { font-size: 17px; }
+
+.md .icon { width: 26px; height: 26px; }
+.md .wordmark { font-size: 22px; }
+
+.lg .icon { width: 36px; height: 36px; }
+.lg .wordmark { font-size: 30px; }
+
+/* DARK MODE */
+.onDark .chat {
+  color: var(--text-on-dark);
+  opacity: 0.8;
+}
+
+.onDark .icon {
+  filter: none;
+}
