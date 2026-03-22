@@ -1,9 +1,11 @@
-# ✨ nullChat
+<p>
+  <img src="./screenshots/logo.png" width="40" align="left" style="margin-right: 10px;" />
+  <b style="font-size: 32px;">nullChat</b>
+</p>
+
+<br/>
 
 > Private, encrypted chat rooms. No accounts. No logs. Messages disappear.
-
----
-
 ## 🧠 What is nullChat?
 
 nullChat lets you create a temporary chat room and share access with a key.
