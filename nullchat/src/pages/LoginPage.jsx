@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import Logo from '../components/Logo.jsx'
+import { roomsApi } from '../services/api.js'          // ← NEW
 import {
   generateRoomId,
   generateAccessKey,
@@ -12,7 +13,7 @@ import {
 } from '../utils/crypto.js'
 import styles from './LoginPage.module.css'
 
-/* ── Icons ────────────────────────────────────── */
+/* ── Icons (unchanged) ────────────────────────── */
 function PasteIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -54,7 +55,6 @@ function CopyIconButton({ text }) {
   )
 }
 
-/* Field with label outside + paste button */
 function Field({ label, value, onChange, placeholder, error }) {
   const [pasted, setPasted] = useState(false)
   const handlePaste = async () => {
@@ -95,37 +95,99 @@ function Field({ label, value, onChange, placeholder, error }) {
 export default function LoginPage() {
   const navigate = useNavigate()
 
+  // Join state
   const [joinRoom, setJoinRoom]     = useState('')
   const [joinKey, setJoinKey]       = useState('')
   const [joinErrors, setJoinErrors] = useState({})
+  const [joinLoading, setJoinLoading] = useState(false)   // ← NEW
 
+  // Generate state
   const [generatedRoom, setGeneratedRoom] = useState('')
   const [generatedKey, setGeneratedKey]   = useState('')
   const [isGenerating, setIsGenerating]   = useState(false)
   const generated = !!(generatedRoom && generatedKey)
 
+  // Error state for API errors                            // ← NEW
+  const [apiError, setApiError] = useState('')
+
+  // ── Generate — calls backend now ──────────────────── // ← CHANGED
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true)
-    setGeneratedRoom('')
-    setGeneratedKey('')
-    await new Promise((r) => setTimeout(r, 320))
-    setGeneratedRoom(generateRoomId())
-    setGeneratedKey(generateAccessKey())
+    setApiError('')
+
+    // Generate credentials client-side (same as before)
+    const roomId    = generateRoomId()
+    const accessKey = generateAccessKey()
+
+    try {
+      // Register the room on the server
+      await roomsApi.create(roomId, accessKey)
+
+      // Only set state if server accepted it
+      setGeneratedRoom(roomId)
+      setGeneratedKey(accessKey)
+
+    } catch (err) {
+      // If room ID collision (extremely rare), just try again
+      if (err.status === 409) {
+        setIsGenerating(false)
+        return handleGenerate()
+      }
+      setApiError('Failed to create room. Check your connection.')
+    }
+
     setIsGenerating(false)
   }, [])
 
-  const handleJoin = () => {
+  // ── Join — calls backend now ───────────────────────  // ← CHANGED
+  const handleJoin = async () => {
+    // Client-side validation first (fast, no network)
     const errors = {}
     if (!joinRoom.trim())               errors.room = 'Room ID is required'
     else if (!validateRoomId(joinRoom)) errors.room = 'Format: NULL-XXXX-XXXX'
     if (!joinKey.trim())                errors.key  = 'Access key is required'
     else if (!validateKey(joinKey))     errors.key  = 'Invalid key format'
     if (Object.keys(errors).length) { setJoinErrors(errors); return }
-    navigate('/chat', { state: { roomId: joinRoom.trim(), accessKey: joinKey.trim() } })
+
+    setJoinLoading(true)
+    setApiError('')
+
+    try {
+      // Verify with server — checks room exists + key hash matches
+      const data = await roomsApi.join(joinRoom.trim(), joinKey.trim())
+
+      // Pass token to chat page along with credentials
+      navigate('/chat', {
+        state: {
+          roomId:    joinRoom.trim(),
+          accessKey: joinKey.trim(),
+          token:     data.token,          // ← NEW: JWT for WebSocket auth
+        }
+      })
+
+    } catch (err) {
+      if (err.status === 404) {
+        setApiError('Room not found or has expired.')
+      } else if (err.status === 401) {
+        setApiError('Invalid room ID or access key.')
+      } else {
+        setApiError('Connection error. Is the server running?')
+      }
+    }
+
+    setJoinLoading(false)
   }
 
+  // ── Enter generated room ───────────────────────────  // ← CHANGED
   const handleEnterGenerated = () => {
-    navigate('/chat', { state: { roomId: generatedRoom, accessKey: generatedKey } })
+    navigate('/chat', {
+      state: {
+        roomId:    generatedRoom,
+        accessKey: generatedKey,
+        // No token here — ChatPage will call join() itself
+        // because the creator also needs a participant token
+      }
+    })
   }
 
   return (
@@ -142,11 +204,10 @@ export default function LoginPage() {
 
             <h1 className={styles.heading}>Private chat,<br />without the noise.</h1>
             <p className={styles.subheading}>
-              Join a room with a key or generate a new one in seconds.
-              Designed to feel clean, fast and secure.
+              Join a room with a key, or generate a new one in seconds.
+              Designed to feel clean, fast, and secure.
             </p>
 
-            {/* White card with label + inputs inside */}
             <div className={styles.formCard}>
               <span className={styles.sectionLabel}>Join a room</span>
 
@@ -157,6 +218,7 @@ export default function LoginPage() {
                   onChange={(e) => {
                     setJoinRoom(e.target.value.toUpperCase())
                     setJoinErrors((p) => ({ ...p, room: '' }))
+                    setApiError('')
                   }}
                   placeholder="NULL-XXXX-XXXX"
                   error={joinErrors.room}
@@ -167,14 +229,31 @@ export default function LoginPage() {
                   onChange={(e) => {
                     setJoinKey(e.target.value.toLowerCase())
                     setJoinErrors((p) => ({ ...p, key: '' }))
+                    setApiError('')
                   }}
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxxxxxx"
                   error={joinErrors.key}
                 />
               </div>
 
-              <button className={styles.btnPrimary} onClick={handleJoin}>
-                Enter Room →
+              {/* API error shown here */}
+              {apiError && (
+                <p style={{
+                  fontSize: '12px',
+                  color: '#ef4444',
+                  marginBottom: '8px',
+                  paddingLeft: '2px'
+                }}>
+                  {apiError}
+                </p>
+              )}
+
+              <button
+                className={styles.btnPrimary}
+                onClick={handleJoin}
+                disabled={joinLoading}
+              >
+                {joinLoading ? 'Verifying…' : 'Enter Room →'}
               </button>
             </div>
 
@@ -194,16 +273,27 @@ export default function LoginPage() {
               <Logo size="lg" />
             </div>
 
-            {/* Idle / Loading */}
             {!generated && (
               <>
                 <h2 className={styles.headingDark}>Generate<br />and share.</h2>
                 <p className={styles.subheadingDark}>
-                  Create a fresh key, copy it, and share it privately
-                  with the person you want to chat with.
+                  Create a fresh room in one click — your Room ID, key,
+                  and QR code appear instantly.
                 </p>
                 <div className={styles.boxDark}>
-                  <span className={styles.boxLabelDark}>New session key</span>
+                  <span className={styles.boxLabelDark}>Create a room</span>
+
+                  {/* API error for generate */}
+                  {apiError && (
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#fca5a5',
+                      paddingLeft: '2px'
+                    }}>
+                      {apiError}
+                    </p>
+                  )}
+
                   <button
                     className={styles.btnPrimary}
                     onClick={handleGenerate}
@@ -218,7 +308,6 @@ export default function LoginPage() {
               </>
             )}
 
-            {/* Generated — QR first */}
             {generated && (
               <>
                 <div className={styles.resultBox}>
@@ -257,7 +346,11 @@ export default function LoginPage() {
                   <button className={styles.btnPrimary} onClick={handleEnterGenerated}>
                     Enter Room →
                   </button>
-                  <button className={styles.regenBtn} onClick={handleGenerate} disabled={isGenerating}>
+                  <button
+                    className={styles.regenBtn}
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                  >
                     {isGenerating ? 'Regenerating…' : 'Regenerate credentials'}
                   </button>
                 </div>
