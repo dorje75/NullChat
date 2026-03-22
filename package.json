@@ -1,0 +1,32 @@
+{
+  "name": "nullchat",
+  "version": "1.0.0",
+  "description": "Private, encrypted chat rooms. No accounts. No logs. Messages disappear.",
+  "private": true,
+  "type": "commonjs",
+
+  "scripts": {
+    "client": "npm --prefix nullchat run dev",
+    "server": "npm --prefix nullchat-server run dev",
+    "dev": "concurrently -n SERVER,CLIENT -c green,blue \"npm run server\" \"npm run client\"",
+    "install:all": "npm install --prefix nullchat && npm install --prefix nullchat-server"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dorje75/NullChat.git"
+  },
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+
+  "bugs": {
+    "url": "https://github.com/dorje75/NullChat/issues"
+  },
+  "homepage": "https://github.com/dorje75/NullChat#readme",
+
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
