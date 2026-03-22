@@ -1,8 +1,8 @@
 <p>
-  <img src="./screenshots/logo.png" width="30" align="left" style="margin-right: 10px;" />
-  <b style="font-size: 32px;">nullChat</b>
+  <img src="./screenshots/logo.png" width="30" align="left" />
 </p>
-
+<b style="font-size: 100px;">nullChat</b>
+<br/>
 <br/>
 
 > Private, encrypted chat rooms. No accounts. No logs. Messages disappear.
