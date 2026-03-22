@@ -51,7 +51,7 @@ No signup. No history. No trace.
 
 * Node.js + Fastify
 * WebSockets (real-time messaging + room-based broadcasting)
-* Redis (TTL-based ephemeral rooms)
+* Redis (TTL-based rooms)
 * JWT authentication
 
 ---
