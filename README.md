@@ -1,5 +1,5 @@
 <p>
-  <img src="./screenshots/logo.png" width="40" align="left" style="margin-right: 10px;" />
+  <img src="./screenshots/logo.png" width="30" align="left" style="margin-right: 10px;" />
   <b style="font-size: 32px;">nullChat</b>
 </p>
 
